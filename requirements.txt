@@ -2,4 +2,5 @@ Pandas
 numpy
 matplotlib
 scipy
+seaborn
 -e .
