@@ -1,4 +1,5 @@
 Pandas
 numpy
-matplotlib 
+matplotlib
+scipy
 -e .
