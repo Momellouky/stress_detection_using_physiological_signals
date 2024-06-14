@@ -40,7 +40,8 @@ class DataIngestion :
         subjects_lst = os.listdir(self.ingestion_config.data_source)
         subjects_lst = [item for item in subjects_lst if item.startswith('S') and item[1:].isdigit()]
         for subject in subjects_lst : 
-            temp_data = self.read_pkl_file(subject_id=subjects_lst[0])
+            subject_file_path = os.path.join(self.ingestion_config.data_source, subject, f'{subject}.pkl')
+            temp_data = pd.read_pickle(subject_file_path)
             subjects_data[subject] = temp_data
             
         return subjects_data
@@ -88,44 +89,42 @@ class DataIngestion :
         }
         
         for subject in subjects_lst : 
-            # x_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[0]
-            # y_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[1]
-            # z_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[2]
-            # temp_data = subjects_data[subject]['signal']['wrist']['TEMP']
-            # eda_data = subjects_data[subject]['signal']['wrist']['EDA']
-            # bvp_data = subjects_data[subject]['signal']['wrist']['BVP']
+
+            x_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[0]
+            y_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[1]
+            z_acc_data = subjects_data[subject]['signal']['wrist']['ACC'].T[2]
+            temp_data = subjects_data[subject]['signal']['wrist']['TEMP']
+            eda_data = subjects_data[subject]['signal']['wrist']['EDA']
+            bvp_data = subjects_data[subject]['signal']['wrist']['BVP']
             resp_data = subjects_data[subject]['signal']['chest']['Resp']
             emg_data = subjects_data[subject]['signal']['chest']['EMG']
             ecg_data = subjects_data[subject]['signal']['chest']['ECG']
             labels_data = subjects_data[subject]['label']
             
-        #     print(f'eda_data.shape : {eda_data.shape}')
-        #     print(f'bvp_data.shape : {bvp_data.shape}')
-            
-            # temp_subject = [subject] * temp_data.shape[0]
-            # eda_subject = [subject] * eda_data.shape[0]
-            # bvp_subject = [subject] * bvp_data.shape[0]
-            # acc_subject = [subject] * x_acc_data.shape[0]
+            temp_subject = [subject] * temp_data.shape[0]
+            eda_subject = [subject] * eda_data.shape[0]
+            bvp_subject = [subject] * bvp_data.shape[0]
+            acc_subject = [subject] * x_acc_data.shape[0]
             resp_subject = [subject] * resp_data.shape[0]
             emg_subject = [subject] * emg_data.shape[0]
             ecg_subject = [subject] * ecg_data.shape[0]
             
-            # for i in range(0, len(temp_data)): 
-            #     temp_dict['TEMP'].append(temp_data[i][0])
-            #     temp_dict['subject'].append(temp_subject[i])
-            # for i in range(0, len(eda_data)): 
-            #     eda_dict['EDA'].append(eda_data[i][0])
-            #     eda_dict['subject'].append(eda_subject[i])
+            for i in range(0, len(temp_data)): 
+                temp_dict['TEMP'].append(temp_data[i][0])
+                temp_dict['subject'].append(temp_subject[i])
+            for i in range(0, len(eda_data)): 
+                eda_dict['EDA'].append(eda_data[i][0])
+                eda_dict['subject'].append(eda_subject[i])
                 
-            # for i in range(0, len(bvp_data)): 
-            #     bvp_dict['BVP'].append(bvp_data[i][0])
-            #     bvp_dict['subject'].append(bvp_subject[i])
+            for i in range(0, len(bvp_data)): 
+                bvp_dict['BVP'].append(bvp_data[i][0])
+                bvp_dict['subject'].append(bvp_subject[i])
             
-            # for i in range(0, len(x_acc_data)): 
-            #     acc_dict['subject'].append(acc_subject[i])
-            #     acc_dict['x_axis'].append(x_acc_data[i])
-            #     acc_dict['y_axis'].append(y_acc_data[i])
-            #     acc_dict['z_axis'].append(z_acc_data[i])
+            for i in range(0, len(x_acc_data)): 
+                acc_dict['subject'].append(acc_subject[i])
+                acc_dict['x_axis'].append(x_acc_data[i])
+                acc_dict['y_axis'].append(y_acc_data[i])
+                acc_dict['z_axis'].append(z_acc_data[i])
                 
             for i in range(0, len(resp_data)): 
                 resp_dict['RESP'].append(resp_data[i][0])
@@ -142,17 +141,17 @@ class DataIngestion :
             for i in range(0, len(labels_data)): 
                 label_dict['label'].append(labels_data[i])
 
-        # bvp_df = pd.DataFrame(bvp_dict)
-        # eda_df = pd.DataFrame(eda_dict)
-        # temp_df = pd.DataFrame(temp_dict)
-        # acc_df = pd.DataFrame(acc_dict)
+        bvp_df = pd.DataFrame(bvp_dict)
+        eda_df = pd.DataFrame(eda_dict)
+        temp_df = pd.DataFrame(temp_dict)
+        acc_df = pd.DataFrame(acc_dict)
         resp_df = pd.DataFrame(resp_dict)
         emg_df = pd.DataFrame(emg_dict)
         ecg_df = pd.DataFrame(ecg_dict)
         labels_df = pd.DataFrame(label_dict)
         
         return (
-                # bvp_df, eda_df, temp_df, acc_df
+                bvp_df, eda_df, temp_df, acc_df, 
                 resp_df, emg_df, 
                 ecg_df, labels_df)
         
@@ -163,22 +162,26 @@ class DataIngestion :
             subjects_data = self.get_subjects_data() 
             
             # construct a dataframe
-            # bvp_df, eda_df, temp_df, acc_df, 
-            resp_df, emg_df, ecg_df, label_df = self.construct_dataframes(subjects_data=subjects_data)
+            bvp_df, eda_df, temp_df, acc_df, resp_df, emg_df, ecg_df, label_df = self.construct_dataframes(subjects_data=subjects_data)
             
             # save the dataframe as csv
             os.makedirs(self.ingestion_config.local_data_store, exist_ok=True)
-            # bvp_df.to_csv(self.ingestion_config.wesad_bvp_data_store_location, index=False, sep=';')
-            # eda_df.to_csv(self.ingestion_config.wesad_eda_data_store_location, index=False, sep=';')
-            # temp_df.to_csv(self.ingestion_config.wesad_temp_data_store_location, index=False, sep=';')
-            # acc_df.to_csv(self.ingestion_config.wesad_acc_data_store_location, index=False, sep=';')
+            logging.info('SAVING BVP DATA')
+            bvp_df.to_csv(self.ingestion_config.wesad_bvp_data_store_location, index=False, sep=';')
+            logging.info('SAVING EDA DATA')
+            eda_df.to_csv(self.ingestion_config.wesad_eda_data_store_location, index=False, sep=';')
+            logging.info('SAVING TEMP DATA')
+            temp_df.to_csv(self.ingestion_config.wesad_temp_data_store_location, index=False, sep=';')
+            logging.info('SAVING ACC DATA')
+            acc_df.to_csv(self.ingestion_config.wesad_acc_data_store_location, index=False, sep=';')
             logging.info('SAVING RESP DATA')
             resp_df.to_csv(self.ingestion_config.wesad_resp_data_store_location, index=False, sep=';')
             logging.info('SAVING EMG DATA')
             emg_df.to_csv(self.ingestion_config.wesad_emg_data_store_location, index=False, sep=';')
+            logging.info('SAVING ECG DATA')
             ecg_df.to_csv(self.ingestion_config.wesad_ecg_data_store_location, index=False, sep=';')
             logging.info('SAVING LABEL DATA')
-            label_df.to_csv(self.ingestion_config.wesad_label_data_store_location, index=False, sep=';')
+            label_df.to_csv(self.ingestion_config.wesad_label_data_store_location, index=False, sep=';') 
             logging.info('SAVE COMPLETED')
      
         except Exception as e: 
