@@ -11,7 +11,7 @@ import numpy as np
 @dataclass
 class EdaSignalDecomposerConfig : 
     data_store = os.path.join('src', 'notebooks', 'data')
-    eda_data_store = os.path.join(data_store, 'wesad_eda_empatica_csv')
+    eda_data_store = os.path.join(data_store, 'wesad_eda_empatica.csv')
     eda_component_save_dir = os.path.join(data_store, 'eda_batch_components')
     eda_merged_component_save_dir = os.path.join(data_store, 'eda_merged_components')
     
@@ -21,7 +21,7 @@ class EdaSignalDeconposer :
     def __init__(self) -> None:
         self.eda_signal_decomposer_config = EdaSignalDecomposerConfig()
         
-    def _run_cvxEDA(self, eda_signal, delta, result_queue):
+    def _run_cvxEDA(self, eda_signal, delta):
         """Run the cvxEDA method on EDA signal. 
 
         Args:
@@ -43,14 +43,17 @@ class EdaSignalDeconposer :
 
         comps = [phasic_comp, smna_comp, tonic_comp]
         
-        if result_queue.full(): 
-            print("Queue full. We can't push additional data. ")
-        else : 
-            print("Queue size is sufficient")
-            result_queue.put(comps)
+        # if result_queue.full(): 
+        #     print("Queue full. We can't push additional data. ")
+        # else : 
+        #     print("Queue size is sufficient")
+        #     result_queue.put(comps)
         
-        print("===============End run_cvxEDA function===============")
-        
+        # print("===============End run_cvxEDA function===============")
+        # return comps 
+        return comps
+    
+    @DeprecationWarning
     def decompose(self, n_hz:int = 4, keep_list:list = None, save_file:bool = False) : 
         filtered_eda_df = pd.DataFrame()
         eda_temp_df = pd.DataFrame() 
@@ -65,8 +68,9 @@ class EdaSignalDeconposer :
         
 
         print("=============== Dropping subjects with invalid labels... ===============")
-        data_df = data_df.drop(data_df[(data_df['subject'] == 'S11') | (data_df['subject'] == 'S13') | (data_df['subject'] == 'S61')].index)
-        eda_df = data_df[data_df['EDA'].isna() == False][['EDA', 'subject', 'trial']]
+        eda_df = data_df
+        # data_df = data_df.drop(data_df[(data_df['subject'] == 'S11') | (data_df['subject'] == 'S13') | (data_df['subject'] == 'S61')].index)
+        # eda_df = data_df[data_df['EDA'].isna() == False][['EDA', 'subject', 'trial']]
         if eda_df['EDA'].dtype == str : 
             eda_df['EDA'] = eda_df['EDA'].str.replace(',', '.').astype('float')
         
@@ -88,8 +92,9 @@ class EdaSignalDeconposer :
             # self.add_subject_trials(filtered_df, subject_trial_pairs, ['S11', 'S13', 'S61'])
             # filtered_eda_df = self.filter_df(eda_df, subject_trial_pairs)
             # eda_df = filtered_eda_df
-            filtered_df = pd.read_csv('../../data/filtered_eda.csv', sep=';')
-            eda_df = filtered_df
+            # filtered_df = pd.read_csv('../../data/filtered_eda.csv', sep=';')
+            # eda_df = filtered_df
+            pass
         
         i = 0 
         batch_count = 1
@@ -153,7 +158,7 @@ class EdaSignalDeconposer :
         print("=============== END OF THE PROGRAM ===============")
         print(f"=============== EDA Decomposition in: {end_time - start_time} ===============")
         
-        
+    @DeprecationWarning
     def merge_component(self, component : str = 'phasic', n_hz : int = 4, save_file : bool = False) : 
 
         
@@ -176,19 +181,20 @@ class EdaSignalDeconposer :
         
         while not PARAMS['stop'] :  
             
-            FOLDER_PATH = self.eda_signal_decomposer_config.eda_data_store + f"/eda_comps_{PARAMS['batch_no']}"
+            FOLDER_PATH = self.eda_signal_decomposer_config.eda_component_save_dir + f"/eda_comps_{PARAMS['batch_no']}"
             PARAMS['batch_no'] += 1
             
+            print(f"FOLDER_PATH : {FOLDER_PATH}")
             FILE_NAME = f'{component}_comp.csv'  # Pattern to match all CSV files
             
-            print(f"Reading file : {FOLDER_PATH + "/" + FILE_NAME}")
+            print(f"Reading file : {FOLDER_PATH + '/' + FILE_NAME}")
             file_content = self._get_csv_content(FOLDER_PATH, FILE_NAME)
+            print(f"file_content: {file_content}")
             
             if file_content is None  : 
                 PARAMS['stop'] = True
                 continue
             
-            print(f"csv_file shape: {file_content.shape}")
             
             eda_component.append(file_content)  
         
@@ -216,7 +222,8 @@ class EdaSignalDeconposer :
         
         print(f"Program Ended WITHOUT errors. ")
         print(f"=============== Program Ended WITHOUT errors.  ===============")
-        
+    
+    @DeprecationWarning
     def _get_csv_content(self, folder_path, file_name_pattern):
         """
         Get the content of a specific CSV file from a folder as a NumPy array.
@@ -246,9 +253,40 @@ class EdaSignalDeconposer :
             
             return None
         
+    def decompose_eda(self, frequency:int = 4) : 
+        
+        res = {
+            'subject' : [],
+            'phasic' : [], 
+            'tonic' : [], 
+            'smna' : []
+        }
+        
+        eda_df = pd.read_csv(self.eda_signal_decomposer_config.eda_data_store, sep=';') 
+        subjects_lst = eda_df.subject.unique() 
+        print(f'subjects_lst  : {subjects_lst}')
+        for subject in subjects_lst : 
+            data = eda_df[eda_df['subject'] == subject] 
+            eda_comps = self._run_cvxEDA(data['EDA'], 1 / frequency)
+            for phasic in eda_comps[0] : 
+                res['phasic'].append(phasic)
+                
+            for smna in eda_comps[1] : 
+                res['smna'].append(smna)
+                
+            for tonic in eda_comps[2] : 
+                res['tonic'].append(tonic)
+                
+            for _ in range(0, len(eda_comps[0])) : 
+                res['subject'].append(subject)
+                
+        eda_comps_df = pd.DataFrame(res) 
+        
+        return eda_comps_df
         
 if __name__ == '__main__' : 
     
     decomposer = EdaSignalDeconposer() 
-    decomposer.decompose() 
-    decomposer.merge_component()
+    eda_comps_df = decomposer.decompose_eda() 
+    eda_comps_df.to_csv(f'{decomposer.eda_signal_decomposer_config.data_store}/eda_comps.csv', sep=';', index=False)
+    del decomposer
