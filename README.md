@@ -49,31 +49,6 @@ You can install the dependencies using pip:
 pip install numpy pandas scikit-learn keras tensorflow
 ```
 
-## Usage
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/stress-detection.git
-   cd stress-detection
-   ```
-
-2. Download the WESAD dataset and place it in the `data` directory.
-
-3. Run the preprocessing script to extract features from the raw data:
-   ```bash
-   python preprocess.py
-   ```
-
-4. Train and evaluate the machine learning models:
-   ```bash
-   python train_ml.py
-   ```
-
-5. Train and evaluate the deep learning model:
-   ```bash
-   python train_dl.py
-   ```
-
 ## Results
 
 The results of the models will be saved in the `results` directory. You can find detailed performance metrics and plots in this directory.
